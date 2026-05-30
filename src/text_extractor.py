@@ -5,6 +5,7 @@ Extracts raw text from cv files with different formats (pdf, docx, txt).
 import os
 import docx
 from PyPDF2 import PdfReader
+from .helpers.link_extractor import _build_link_markers
 
 
 class TextExtractor:
@@ -21,11 +22,11 @@ class TextExtractor:
         file_extension = os.path.splitext(file_path)[1].lower()
 
         if file_extension == '.pdf':
-            return self.extract_pdf()
+            return self.extract_pdf(file_path)
         elif file_extension == '.docx':
-            return self.extract_docx()
+            return self.extract_docx(file_path)
         elif file_extension == '.txt':
-            return self.extract_text()
+            return self.extract_text(file_path)
         else:
             raise ValueError("Unsupported file format.")
 
@@ -41,7 +42,6 @@ class TextExtractor:
             except UnicodeDecodeError:
                 continue
 
-        # If no valid encoding found, raise an error
         raise ValueError(
             "Unable to decode the file with the provided encodings.")
 
@@ -61,14 +61,19 @@ class TextExtractor:
 
         try:
             reader = PdfReader(file_path)
+
+            # Extract annotation-layer hyperlinks as structured markers
+            link_markers = _build_link_markers(reader)
+
+            # Extract text content from all pages
             text = ''
-
             for page in reader.pages:
-                text += page.extract_text()
-                if text:
-                    text += text + '\n'
+                page_text = page.extract_text() or ''
+                text += page_text + '\n'
 
-            return text
+            # Inject link markers at the top so entity_extractor can always find them
+            return link_markers + text
+
         except Exception as e:
             raise ValueError(f"Error extracting PDF file: {e}")
 
