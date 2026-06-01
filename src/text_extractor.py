@@ -4,8 +4,9 @@ Extracts raw text from cv files with different formats (pdf, docx, txt).
 
 import os
 import docx
+from docx.oxml.ns import qn
 from PyPDF2 import PdfReader
-from .helpers.link_extractor import _build_link_markers
+from src.helpers.link_extractor import _build_link_markers
 
 
 class TextExtractor:
@@ -34,7 +35,6 @@ class TextExtractor:
         if file_path is None:
             file_path = self.file_path
 
-        # Handle encoding
         for encoding in ['utf-8', 'latin-1', 'cp1252']:
             try:
                 with open(file_path, 'r', encoding=encoding) as file:
@@ -51,7 +51,14 @@ class TextExtractor:
 
         try:
             doc = docx.Document(file_path)
-            return '\n'.join([para.text for para in doc.paragraphs])
+            lines = []
+            # Use w:t element iteration to capture ALL text including hyperlink anchor text
+            for para in doc.paragraphs:
+                # Extract every w:t element in the paragraph (runs + hyperlink runs)
+                full_text = "".join(
+                    t.text for t in para._element.iter(qn("w:t")) if t.text)
+                lines.append(full_text)
+            return "\n".join(lines)
         except Exception as e:
             raise ValueError(f"Error extracting DOCX file: {e}")
 
