@@ -3,6 +3,14 @@ Extracts raw text from cv files with different formats (pdf, docx, txt).
 '''
 
 import os
+import sys
+
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Add root to sys.path for helper imports
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+
 import docx
 from docx.oxml.ns import qn
 from PyPDF2 import PdfReader
@@ -87,11 +95,10 @@ class TextExtractor:
 
 if __name__ == "__main__":
     # For testing purposes, we can randomly select a file from the raw_resumes directory
+    
     import random
 
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     raw_resumes_dir = os.path.join(parent_dir, 'data', 'raw_resumes')
-
     files = [f for f in os.listdir(raw_resumes_dir) if os.path.isfile(
         os.path.join(raw_resumes_dir, f))]
 
