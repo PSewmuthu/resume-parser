@@ -3,9 +3,18 @@ Extracts raw text from cv files with different formats (pdf, docx, txt).
 '''
 
 import os
+import sys
+
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Add root to sys.path for helper imports
+if parent_dir not in sys.path:
+    sys.path.append(parent_dir)
+
 import docx
+from docx.oxml.ns import qn
 from PyPDF2 import PdfReader
-from .helpers.link_extractor import _build_link_markers
+from src.helpers.link_extractor import _build_link_markers
 
 
 class TextExtractor:
@@ -34,7 +43,6 @@ class TextExtractor:
         if file_path is None:
             file_path = self.file_path
 
-        # Handle encoding
         for encoding in ['utf-8', 'latin-1', 'cp1252']:
             try:
                 with open(file_path, 'r', encoding=encoding) as file:
@@ -51,7 +59,14 @@ class TextExtractor:
 
         try:
             doc = docx.Document(file_path)
-            return '\n'.join([para.text for para in doc.paragraphs])
+            lines = []
+            # Use w:t element iteration to capture ALL text including hyperlink anchor text
+            for para in doc.paragraphs:
+                # Extract every w:t element in the paragraph (runs + hyperlink runs)
+                full_text = "".join(
+                    t.text for t in para._element.iter(qn("w:t")) if t.text)
+                lines.append(full_text)
+            return "\n".join(lines)
         except Exception as e:
             raise ValueError(f"Error extracting DOCX file: {e}")
 
@@ -80,11 +95,10 @@ class TextExtractor:
 
 if __name__ == "__main__":
     # For testing purposes, we can randomly select a file from the raw_resumes directory
+    
     import random
 
-    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     raw_resumes_dir = os.path.join(parent_dir, 'data', 'raw_resumes')
-
     files = [f for f in os.listdir(raw_resumes_dir) if os.path.isfile(
         os.path.join(raw_resumes_dir, f))]
 
